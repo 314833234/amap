@@ -1,4 +1,4 @@
-# amap-app
+# amap
 
 ## Project setup
 ```

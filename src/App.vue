@@ -11,7 +11,6 @@
 </template>
 
 <script>
-/* eslint-disable */
 import mapIcon from '@/assets/images/icon.svg'
 
 export default {
@@ -66,6 +65,8 @@ export default {
       await this.initMapIcon()
 
       await this.initInfoWindow()
+
+      await this.autoPostion()
 
       await this.initMarkers([
         {
@@ -136,6 +137,57 @@ export default {
       })
 
       this.amapObj.add(this.amapMarkers)
+    },
+    /**
+     * 自动定位
+     */
+    autoPostion () {
+      const _this = this;
+
+      AMap.plugin('AMap.Geolocation', function() {
+        var geolocation = new AMap.Geolocation({
+          enableHighAccuracy: true,//是否使用高精度定位，默认:true
+          timeout: 10000,          //超过10秒后停止定位，默认：5s
+          buttonPosition:'RB',    //定位按钮的停靠位置
+          buttonOffset: new AMap.Pixel(14, 130),//定位按钮与设置的停靠位置的偏移量，默认：Pixel(10, 20)
+          zoomToAccuracy: true,   //定位成功后是否自动调整地图视野到定位点
+          showMarker: false
+        });
+        _this.amapObj.addControl(geolocation);
+        geolocation.getCurrentPosition(function(status, result){
+          // 服务异常
+          if(_this.amapServerError(result.info)) {
+            _this.$emit('server-error', result.message);
+            return false;
+          }
+
+          if(status=='complete'){
+            _this.$emit('auto-position-success', result);
+          }
+          else{
+            _this.$emit('auto-position-error', result);
+          }
+        });
+      });
+    },
+    /**
+     * 高德地图服务异常
+     * 10001  INVALID_USER_KEY            key不正确或过期
+     * 10003  DAILY_QUERY_OVER_LIMIT      访问已超出日访问量
+     * 10006  INVALID_USER_DOMAIN         绑定的域名无效
+     * 10009  USERKEY_PLAT_NOMATCH        请求key与绑定平台不符
+     * 10012  INSUFFICIENT_PRIVILEGES     权限不足，请求服务被拒绝
+     * 300**  ENGINE_RESPONSE_DATA_ERROR  大于30000时，服务响应失败
+     */
+    amapServerError(errCode) {
+      let flag = false // false: 服务正常    true: 服务异常
+      let serverErrorCode = [10001, 10003, 10006, 10009, 10012]
+      let reqErrCode = serverErrorCode.some(item => item == errCode); // 服务异常
+
+      if(!errCode) return flag;
+      if(reqErrCode) flag = true;
+
+      return flag;
     }
   }
 }
